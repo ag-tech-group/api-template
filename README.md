@@ -4,18 +4,18 @@ FastAPI template with async PostgreSQL, JWT authentication, and database migrati
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Framework | FastAPI |
-| Database | PostgreSQL (async via asyncpg) |
-| ORM | SQLAlchemy 2.0 |
-| Migrations | Alembic |
-| Auth | FastAPI-Users (JWT) |
-| Package Manager | uv |
-| Containerization | Docker / Docker Compose |
-| Testing | Pytest (async) |
-| Linting/Formatting | Ruff |
-| Git Hooks | pre-commit |
+| Component          | Technology                     |
+| ------------------ | ------------------------------ |
+| Framework          | FastAPI                        |
+| Database           | PostgreSQL (async via asyncpg) |
+| ORM                | SQLAlchemy 2.0                 |
+| Migrations         | Alembic                        |
+| Auth               | FastAPI-Users (JWT)            |
+| Package Manager    | uv                             |
+| Containerization   | Docker / Docker Compose        |
+| Testing            | Pytest (async)                 |
+| Linting/Formatting | Ruff                           |
+| Git Hooks          | pre-commit                     |
 
 ## Requirements
 
@@ -60,6 +60,7 @@ docker compose up -d
 ## API Documentation
 
 Once running, visit:
+
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
@@ -67,20 +68,20 @@ Once running, visit:
 
 ### Auth
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Create a new account |
-| POST | `/auth/jwt/login` | Get JWT access token |
+| Method | Endpoint          | Description          |
+| ------ | ----------------- | -------------------- |
+| POST   | `/auth/register`  | Create a new account |
+| POST   | `/auth/jwt/login` | Get JWT access token |
 
 ### Racers (Example CRUD)
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/racers` | No | List all racers |
-| GET | `/racers/{id}` | No | Get a racer by ID |
-| POST | `/racers` | Yes | Create a racer |
-| PATCH | `/racers/{id}` | Yes | Update a racer |
-| DELETE | `/racers/{id}` | Yes | Delete a racer |
+| Method | Endpoint       | Auth | Description       |
+| ------ | -------------- | ---- | ----------------- |
+| GET    | `/racers`      | No   | List all racers   |
+| GET    | `/racers/{id}` | No   | Get a racer by ID |
+| POST   | `/racers`      | Yes  | Create a racer    |
+| PATCH  | `/racers/{id}` | Yes  | Update a racer    |
+| DELETE | `/racers/{id}` | Yes  | Delete a racer    |
 
 ## Database Migrations
 
@@ -211,12 +212,12 @@ If your project doesn't need auth, you can remove it:
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
-| `SECRET_KEY` | JWT signing key | `change-me-in-production` |
-| `ENVIRONMENT` | `development` or `production` | `development` |
+| Variable       | Description                   | Default                                                              |
+| -------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL` | PostgreSQL connection string  | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
+| `SECRET_KEY`   | JWT signing key               | `change-me-in-production`                                            |
+| `ENVIRONMENT`  | `development` or `production` | `development`                                                        |
 
 ## License
 
-MIT
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
