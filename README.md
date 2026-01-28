@@ -63,6 +63,20 @@ Once running, visit:
 
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+- OpenAPI JSON: http://localhost:8000/openapi.json
+
+### Frontend Integration
+
+This API automatically generates an OpenAPI specification that can be used to generate type-safe clients for frontends. The companion [frontend template](https://github.com/yourusername/web-template) uses [orval](https://orval.dev/) to generate React Query hooks and TypeScript types from this spec.
+
+To generate the frontend client:
+
+```bash
+# In the frontend project run this or any similar applicable command
+pnpm generate-api
+```
+
+This requires the API to be running locally (or set `OPENAPI_URL` to point to a deployed instance).
 
 ## API Endpoints
 
