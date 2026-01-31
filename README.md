@@ -1,6 +1,6 @@
 # API Template
 
-FastAPI template with async PostgreSQL, JWT authentication, and database migrations.
+FastAPI template with async PostgreSQL, cookie-based JWT authentication, refresh tokens, and security hardening.
 
 ## Tech Stack
 
@@ -10,7 +10,8 @@ FastAPI template with async PostgreSQL, JWT authentication, and database migrati
 | Database           | PostgreSQL (async via asyncpg) |
 | ORM                | SQLAlchemy 2.0                 |
 | Migrations         | Alembic                        |
-| Auth               | FastAPI-Users (JWT)            |
+| Auth               | FastAPI-Users (cookie JWT)     |
+| Rate Limiting      | slowapi                        |
 | Package Manager    | uv                             |
 | Containerization   | Docker / Docker Compose        |
 | Testing            | Pytest (async)                 |
@@ -50,7 +51,7 @@ The API will be available at http://localhost:8000
 ## Running with Docker
 
 ```bash
-# Start everything (API + PostgreSQL)
+# Start everything (API + PostgreSQL + Adminer)
 docker compose up
 
 # Or run in background
@@ -64,6 +65,12 @@ Once running, visit:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 - OpenAPI JSON: http://localhost:8000/openapi.json
+
+### Database Viewer
+
+Adminer is available at http://localhost:8080 when running via Docker Compose.
+
+Login: System=PostgreSQL, Server=db, User=postgres, Password=postgres, Database=api_template
 
 ### Frontend Integration
 
@@ -82,20 +89,43 @@ This requires the API to be running locally (or set `OPENAPI_URL` to point to a 
 
 ### Auth
 
-| Method | Endpoint          | Description          |
-| ------ | ----------------- | -------------------- |
-| POST   | `/auth/register`  | Create a new account |
-| POST   | `/auth/jwt/login` | Get JWT access token |
+| Method | Endpoint            | Description                         |
+| ------ | ------------------- | ----------------------------------- |
+| POST   | `/auth/register`    | Create a new account                |
+| POST   | `/auth/jwt/login`   | Log in (sets access + refresh cookies) |
+| POST   | `/auth/jwt/logout`  | Log out (revokes tokens, clears cookies) |
+| POST   | `/auth/refresh`     | Rotate refresh token, reissue access token |
+| GET    | `/auth/me`          | Get current authenticated user      |
 
-### Racers (Example CRUD)
+### Notes (Example CRUD)
 
-| Method | Endpoint       | Auth | Description       |
-| ------ | -------------- | ---- | ----------------- |
-| GET    | `/racers`      | No   | List all racers   |
-| GET    | `/racers/{id}` | No   | Get a racer by ID |
-| POST   | `/racers`      | Yes  | Create a racer    |
-| PATCH  | `/racers/{id}` | Yes  | Update a racer    |
-| DELETE | `/racers/{id}` | Yes  | Delete a racer    |
+All note endpoints require authentication. Users can only access their own notes.
+
+| Method | Endpoint      | Description              |
+| ------ | ------------- | ------------------------ |
+| GET    | `/notes`      | List current user's notes |
+| GET    | `/notes/{id}` | Get a note by ID         |
+| POST   | `/notes`      | Create a note            |
+| PATCH  | `/notes/{id}` | Update a note            |
+| DELETE | `/notes/{id}` | Delete a note            |
+
+## Authentication
+
+Authentication uses httpOnly cookies with short-lived access tokens and rotating refresh tokens.
+
+- **Access token**: 15-minute JWT stored in an `app_access` httpOnly cookie
+- **Refresh token**: 7-day JWT stored in an `app_refresh` httpOnly cookie (scoped to `/auth/refresh`)
+- **Token rotation**: Each refresh issues a new token in the same family; reuse of an old token revokes the entire family (theft detection)
+- **Rate limiting**: Login (5/min), registration (3/min), refresh (30/min)
+
+### Security Features
+
+- **Cookie auth**: httpOnly, Secure (in production), SameSite
+- **CORS lockdown**: Explicit origins, methods, and headers (no wildcards in production)
+- **Security headers**: HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy
+- **Rate limiting**: Per-endpoint limits on auth routes with security event logging
+- **Production config validation**: Rejects weak secrets and default database credentials at startup
+- **Security event logging**: Structured logs for login, logout, registration, token refresh, and rate limit events
 
 ## Database Migrations
 
@@ -146,11 +176,13 @@ uv run pytest
 uv run pytest -v
 
 # Run specific test file
-uv run pytest tests/test_racers.py
+uv run pytest tests/test_notes.py
 
 # Run with coverage
 uv run pytest --cov=app
 ```
+
+The test harness provides `test_user` and `other_user` fixtures for testing user isolation, and an `auth_client` fixture that provides an authenticated HTTP client.
 
 ## Linting & Formatting
 
@@ -192,45 +224,48 @@ Once installed, ruff will automatically check and format your code before each c
 ```
 api-template/
 ├── app/
-│   ├── auth/           # FastAPI-Users JWT setup (removable)
-│   ├── models/         # SQLAlchemy models
-│   ├── routers/        # API route handlers
-│   ├── schemas/        # Pydantic request/response schemas
-│   ├── config.py       # Settings from environment
-│   ├── database.py     # Async SQLAlchemy setup
-│   └── main.py         # FastAPI app entry point
+│   ├── auth/
+│   │   ├── backend.py          # Cookie transport + JWT strategy
+│   │   ├── refresh.py          # Refresh token create/rotate/revoke
+│   │   ├── security_logging.py # Structured security event logging
+│   │   └── users.py            # UserManager with login/failure hooks
+│   ├── models/
+│   │   ├── note.py             # Note model (example CRUD entity)
+│   │   ├── refresh_token.py    # Refresh token model
+│   │   └── user.py             # User model (FastAPI-Users)
+│   ├── routers/
+│   │   ├── auth_refresh.py     # /auth/refresh and /auth/jwt/logout
+│   │   └── notes.py            # Notes CRUD (user-scoped)
+│   ├── schemas/
+│   │   ├── note.py             # Note request/response schemas
+│   │   └── user.py             # User schemas (FastAPI-Users)
+│   ├── config.py               # Settings with production validation
+│   ├── database.py             # Async SQLAlchemy setup
+│   └── main.py                 # App entry point, middleware, routes
 ├── alembic/
-│   ├── versions/       # Migration files
-│   └── env.py          # Alembic configuration
+│   ├── versions/               # Migration files
+│   └── env.py                  # Alembic configuration
 ├── tests/
-│   ├── conftest.py     # Pytest fixtures
-│   └── test_racers.py  # Example tests
-├── .env.example        # Environment template
+│   ├── conftest.py             # Fixtures (client, session, users)
+│   └── test_notes.py           # Notes CRUD + isolation tests
+├── .env.example                # Environment template
 ├── .pre-commit-config.yaml
-├── .python-version     # pyenv Python version
-├── docker-compose.yml
+├── .python-version             # pyenv Python version
+├── docker-compose.yml          # API + PostgreSQL + Adminer
 ├── Dockerfile
 └── pyproject.toml
 ```
 
-## Removing Authentication
-
-If your project doesn't need auth, you can remove it:
-
-1. Delete `app/auth/` directory
-2. Delete `app/models/user.py` and `app/schemas/user.py`
-3. Remove auth imports and routes from `app/main.py`
-4. Remove `Depends(current_active_user)` from route handlers
-5. Remove `fastapi-users` from `pyproject.toml`
-6. Run `uv sync` to update dependencies
-
 ## Environment Variables
 
-| Variable       | Description                   | Default                                                              |
-| -------------- | ----------------------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string  | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
-| `SECRET_KEY`   | JWT signing key               | `change-me-in-production`                                            |
-| `ENVIRONMENT`  | `development` or `production` | `development`                                                        |
+| Variable       | Description                                     | Default                                                              |
+| -------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL` | PostgreSQL connection string                    | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
+| `SECRET_KEY`   | JWT signing key (min 32 chars in production)    | `change-me-in-production`                                            |
+| `ENVIRONMENT`  | `development` or `production`                   | `development`                                                        |
+| `CORS_ORIGINS` | Comma-separated allowed origins (production)    | (empty — dev uses localhost:5100-5199)                               |
+| `FRONTEND_URL` | Frontend URL for redirects                      | `http://localhost:5173`                                              |
+| `COOKIE_DOMAIN`| Cookie domain (leave empty for localhost)       | (empty)                                                              |
 
 ## License
 
