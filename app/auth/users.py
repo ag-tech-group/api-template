@@ -1,15 +1,21 @@
+import logging
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
-from fastapi import Depends
-from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+from fastapi import Depends, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, models
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.backend import auth_backend
+from app.auth.refresh import create_refresh_token, set_refresh_cookie
+from app.auth.security_logging import SecurityEvent, log_security_event
 from app.config import settings
-from app.database import get_async_session
+from app.database import async_session_maker, get_async_session
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 
 async def get_user_db(
@@ -22,14 +28,49 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
     reset_password_token_secret = settings.secret_key
     verification_token_secret = settings.secret_key
 
-    async def on_after_register(self, user: User, request=None):
-        print(f"User {user.id} registered.")
+    async def on_after_register(self, user: User, request: Request | None = None):
+        log_security_event(
+            SecurityEvent.REGISTER,
+            request=request,
+            user_id=str(user.id),
+            email=user.email,
+        )
+
+    async def on_after_login(
+        self,
+        user: User,
+        request: Request | None = None,
+        response: Response | None = None,
+    ):
+        log_security_event(
+            SecurityEvent.LOGIN_SUCCESS,
+            request=request,
+            user_id=str(user.id),
+            email=user.email,
+        )
+        if response is not None:
+            async with async_session_maker() as session:
+                refresh_jwt = await create_refresh_token(str(user.id), session)
+                set_refresh_cookie(response, refresh_jwt)
+
+    async def authenticate(
+        self,
+        credentials: OAuth2PasswordRequestForm,
+    ) -> models.UP | None:
+        user = await super().authenticate(credentials)
+        if user is None:
+            log_security_event(
+                SecurityEvent.LOGIN_FAILURE,
+                email=credentials.username,
+                detail="invalid credentials",
+            )
+        return user
 
     async def on_after_forgot_password(self, user: User, token: str, request=None):
-        print(f"User {user.id} forgot password. Reset token: {token}")
+        logger.info("Password reset requested for user %s.", user.id)
 
     async def on_after_request_verify(self, user: User, token: str, request=None):
-        print(f"Verification requested for {user.id}. Token: {token}")
+        logger.info("Email verification requested for user %s.", user.id)
 
 
 async def get_user_manager(
