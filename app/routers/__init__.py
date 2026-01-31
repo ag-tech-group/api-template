@@ -1,3 +1,3 @@
-from app.routers.racers import router as racers_router
+from app.routers.notes import router as notes_router
 
-__all__ = ["racers_router"]
+__all__ = ["notes_router"]

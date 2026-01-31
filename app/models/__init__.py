@@ -1,4 +1,5 @@
-from app.models.racer import Racer
+from app.models.note import Note
+from app.models.refresh_token import RefreshToken
 from app.models.user import User
 
-__all__ = ["User", "Racer"]
+__all__ = ["Note", "RefreshToken", "User"]
