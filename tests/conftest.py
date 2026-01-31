@@ -65,8 +65,10 @@ def other_user() -> User:
 
 
 @pytest.fixture
-def auth_client(test_user: User) -> AsyncGenerator[AsyncClient, None]:
+async def auth_client(client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient, None]:
     """Client that authenticates as test_user via dependency override."""
     app.dependency_overrides[current_active_user] = lambda: test_user
-    yield
-    app.dependency_overrides.pop(current_active_user, None)
+    try:
+        yield client
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
