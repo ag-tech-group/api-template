@@ -74,7 +74,7 @@ Login: System=PostgreSQL, Server=db, User=postgres, Password=postgres, Database=
 
 ### Frontend Integration
 
-This API automatically generates an OpenAPI specification that can be used to generate type-safe clients for frontends. The companion [frontend template](https://github.com/yourusername/web-template) uses [orval](https://orval.dev/) to generate React Query hooks and TypeScript types from this spec.
+This API automatically generates an OpenAPI specification that can be used to generate type-safe clients for frontends. The companion [web-template](https://github.com/ag-tech-group/web-template) uses [orval](https://orval.dev/) to generate React Query hooks and TypeScript types from this spec.
 
 To generate the frontend client:
 
