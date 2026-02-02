@@ -107,6 +107,14 @@ This requires the API to be running locally (or set `OPENAPI_URL` to point to a 
 | POST   | `/auth/refresh`     | Rotate refresh token, reissue access token |
 | GET    | `/auth/me`          | Get current authenticated user      |
 
+### Admin
+
+Admin endpoints require the `admin` role (superusers also have access).
+
+| Method | Endpoint                       | Description              |
+| ------ | ------------------------------ | ------------------------ |
+| PATCH  | `/admin/users/{id}/role`       | Update a user's role     |
+
 ### Notes (Example CRUD)
 
 All note endpoints require authentication. Users can only access their own notes.
@@ -127,6 +135,23 @@ Authentication uses httpOnly cookies with short-lived access tokens and rotating
 - **Refresh token**: 7-day JWT stored in an `app_refresh` httpOnly cookie (scoped to `/auth/refresh`)
 - **Token rotation**: Each refresh issues a new token in the same family; reuse of an old token revokes the entire family (theft detection)
 - **Rate limiting**: Login (5/min), registration (3/min), refresh (30/min)
+
+### Role-Based Access Control
+
+Users have a `role` field (default: `user`). Roles are defined as a `StrEnum` in `app/auth/roles.py`:
+
+- **user** — default role for all registered users
+- **admin** — can access admin endpoints (e.g. updating user roles)
+
+Superusers (`is_superuser=True`) bypass all role checks. Roles are read-only via `GET /auth/me` and can only be changed by admins via `PATCH /admin/users/{id}/role`. The `require_role()` dependency factory can be used to gate any route:
+
+```python
+from app.auth import require_role
+
+@router.get("/admin-only")
+async def admin_only(user: User = Depends(require_role("admin"))):
+    ...
+```
 
 ### Security Features
 
@@ -265,6 +290,7 @@ api-template/
 │   ├── auth/
 │   │   ├── backend.py          # Cookie transport + JWT strategy
 │   │   ├── refresh.py          # Refresh token create/rotate/revoke
+│   │   ├── roles.py            # UserRole enum + require_role() dependency
 │   │   ├── security_logging.py # Structured security event logging
 │   │   └── users.py            # UserManager with login/failure hooks
 │   ├── models/
@@ -272,6 +298,7 @@ api-template/
 │   │   ├── refresh_token.py    # Refresh token model
 │   │   └── user.py             # User model (FastAPI-Users)
 │   ├── routers/
+│   │   ├── admin.py            # Admin endpoints (role management)
 │   │   ├── auth_refresh.py     # /auth/refresh and /auth/jwt/logout
 │   │   └── notes.py            # Notes CRUD (user-scoped)
 │   ├── schemas/
@@ -289,7 +316,8 @@ api-template/
 │   └── env.py                  # Alembic configuration
 ├── tests/
 │   ├── conftest.py             # Fixtures (client, session, users)
-│   └── test_notes.py           # Notes CRUD + isolation tests
+│   ├── test_notes.py           # Notes CRUD + isolation tests
+│   └── test_roles.py           # Role-based access control tests
 ├── .env.example                # Environment template
 ├── .pre-commit-config.yaml
 ├── .python-version             # pyenv Python version
