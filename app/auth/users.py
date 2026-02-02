@@ -1,7 +1,7 @@
-import logging
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
+import structlog
 from fastapi import Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, models
@@ -15,7 +15,7 @@ from app.config import settings
 from app.database import async_session_maker, get_async_session
 from app.models.user import User
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def get_user_db(
