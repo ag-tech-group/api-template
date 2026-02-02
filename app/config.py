@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Cookie auth
     cookie_domain: str | None = None
 
+    # Logging
+    log_level: str = "INFO"
+
+    # OpenTelemetry
+    otel_enabled: bool = False
+    otel_service_name: str = "api-template"
+    otel_exporter_endpoint: str = "http://localhost:4317"
+
     @property
     def is_development(self) -> bool:
         return self.environment == "development"

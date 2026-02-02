@@ -1,3 +1,7 @@
+import time
+import uuid
+
+import structlog
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,16 +13,24 @@ from slowapi.util import get_remote_address
 from app.auth import auth_backend, current_active_user, fastapi_users
 from app.auth.security_logging import SecurityEvent, log_security_event
 from app.config import settings
+from app.features import router as features_router
+from app.logging import setup_logging
 from app.models.user import User
 from app.routers import notes_router
 from app.routers.auth_refresh import router as auth_refresh_router
 from app.schemas.user import UserCreate, UserRead
+from app.telemetry import setup_telemetry
+
+setup_logging()
+logger = structlog.get_logger("app.request")
 
 app = FastAPI(
     title="API Template",
     description="FastAPI template with async PostgreSQL and cookie-based JWT auth",
     version="0.2.0",
 )
+
+setup_telemetry(app)
 
 # CORS configuration
 app.add_middleware(
@@ -94,8 +106,37 @@ async def add_security_headers(request: Request, call_next) -> Response:
     return response
 
 
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next) -> Response:
+    """Assign a unique request ID to every request."""
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next) -> Response:
+    """Log method, path, status code, and duration for every request."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+    logger.info(
+        "request",
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+    )
+    return response
+
+
 # API routes
 app.include_router(notes_router)
+app.include_router(features_router)
 
 
 @app.get("/")

@@ -1,9 +1,9 @@
-import logging
 from enum import StrEnum
 
+import structlog
 from fastapi import Request
 
-logger = logging.getLogger("app.security")
+logger = structlog.get_logger("app.security")
 
 
 class SecurityEvent(StrEnum):
@@ -29,22 +29,17 @@ def log_security_event(
         ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
 
-    extra = {
-        "security_event": event.value,
-        "ip": ip,
-        "user_agent": user_agent,
-        "user_id": user_id,
-        "email": email,
-    }
+    request_id = None
+    if request is not None:
+        request_id = getattr(request.state, "request_id", None)
 
-    message = f"[{event.value}]"
-    if email:
-        message += f" email={email}"
-    if user_id:
-        message += f" user_id={user_id}"
-    if ip:
-        message += f" ip={ip}"
-    if detail:
-        message += f" {detail}"
-
-    logger.info(message, extra=extra)
+    logger.info(
+        "security_event",
+        security_event=event.value,
+        ip=ip,
+        user_agent=user_agent,
+        user_id=user_id,
+        email=email,
+        detail=detail,
+        request_id=request_id,
+    )

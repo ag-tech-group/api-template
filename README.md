@@ -137,6 +137,34 @@ Authentication uses httpOnly cookies with short-lived access tokens and rotating
 - **Production config validation**: Rejects weak secrets and default database credentials at startup
 - **Security event logging**: Structured logs for login, logout, registration, token refresh, and rate limit events
 
+## Logging, Telemetry & Feature Flags
+
+### Structured Logging
+
+Logging uses [structlog](https://www.structlog.org/) for structured output. In development you get colored console logs; in production, JSON.
+
+Every request is assigned a unique `X-Request-ID` header (or reuses one from the incoming request), and it's automatically bound to all log entries for that request.
+
+Configure via `LOG_LEVEL` env var (default: `INFO`).
+
+### OpenTelemetry
+
+OpenTelemetry tracing is included but disabled by default. To enable, set `OTEL_ENABLED=true` and point `OTEL_EXPORTER_ENDPOINT` at your collector (e.g. Jaeger, Grafana Tempo). FastAPI is auto-instrumented — no code changes needed.
+
+### Analytics
+
+`app/analytics.py` provides an `AnalyticsBackend` protocol with `track()` and `identify()` methods. The default `LogAnalyticsBackend` writes events to structlog. Swap it out by replacing the `analytics` module-level instance with your own implementation (e.g. Segment, PostHog).
+
+Use the `get_analytics()` FastAPI dependency to access it in route handlers.
+
+### Feature Flags
+
+Feature flags are read from `FEATURE_*` environment variables at startup (no database required). Set `FEATURE_<NAME>=true` or `false` in your `.env`.
+
+The `GET /flags` endpoint (requires authentication) returns all flags as a JSON object, consumed by the web-template's `FeatureFlagProvider`.
+
+Use the `get_feature_flags()` dependency in route handlers to check flags server-side via `flags.is_enabled("flag_name")`.
+
 ## Database Migrations
 
 This project uses Alembic for database migrations.
@@ -249,8 +277,12 @@ api-template/
 │   ├── schemas/
 │   │   ├── note.py             # Note request/response schemas
 │   │   └── user.py             # User schemas (FastAPI-Users)
+│   ├── analytics.py            # Analytics event abstraction
 │   ├── config.py               # Settings with production validation
 │   ├── database.py             # Async SQLAlchemy setup
+│   ├── features.py             # Feature flags (env-var backed)
+│   ├── logging.py              # Structlog configuration
+│   ├── telemetry.py            # OpenTelemetry setup
 │   └── main.py                 # App entry point, middleware, routes
 ├── alembic/
 │   ├── versions/               # Migration files
@@ -276,6 +308,11 @@ api-template/
 | `CORS_ORIGINS` | Comma-separated allowed origins (production)    | (empty — dev uses localhost:5100-5199)                               |
 | `FRONTEND_URL` | Frontend URL for redirects                      | `http://localhost:5173`                                              |
 | `COOKIE_DOMAIN`| Cookie domain (leave empty for localhost)       | (empty)                                                              |
+| `LOG_LEVEL`    | Logging level                                   | `INFO`                                                               |
+| `OTEL_ENABLED` | Enable OpenTelemetry tracing                    | `false`                                                              |
+| `OTEL_SERVICE_NAME` | Service name for traces                    | `api-template`                                                       |
+| `OTEL_EXPORTER_ENDPOINT` | OTLP gRPC collector endpoint          | `http://localhost:4317`                                              |
+| `FEATURE_*`    | Feature flags (e.g. `FEATURE_NEW_DASHBOARD=true`) | (none)                                                             |
 
 ## License
 
