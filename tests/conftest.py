@@ -65,9 +65,31 @@ def other_user() -> User:
 
 
 @pytest.fixture
+def admin_user() -> User:
+    """A user with the admin role."""
+    return User(id=uuid4(), email="admin@example.com", hashed_password="fake", role="admin")
+
+
+@pytest.fixture
+def superuser() -> User:
+    """A superuser (bypasses role checks)."""
+    return User(id=uuid4(), email="super@example.com", hashed_password="fake", is_superuser=True)
+
+
+@pytest.fixture
 async def auth_client(client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient, None]:
     """Client that authenticates as test_user via dependency override."""
     app.dependency_overrides[current_active_user] = lambda: test_user
+    try:
+        yield client
+    finally:
+        app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest.fixture
+async def admin_client(client: AsyncClient, admin_user: User) -> AsyncGenerator[AsyncClient, None]:
+    """Client that authenticates as admin_user via dependency override."""
+    app.dependency_overrides[current_active_user] = lambda: admin_user
     try:
         yield client
     finally:
