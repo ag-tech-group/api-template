@@ -6,16 +6,17 @@ from fastapi_users import schemas
 class UserRead(schemas.BaseUser[UUID]):
     """Schema for reading user data."""
 
+    name: str | None = None
     role: str = "user"
 
 
 class UserCreate(schemas.BaseUserCreate):
     """Schema for creating a new user."""
 
-    pass
+    name: str | None = None
 
 
 class UserUpdate(schemas.BaseUserUpdate):
     """Schema for updating user data."""
 
-    pass
+    name: str | None = None

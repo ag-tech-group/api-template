@@ -17,6 +17,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     - is_verified: email verification status
     """
 
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     role: Mapped[str] = mapped_column(
         String(50), default="user", server_default="user", nullable=False
     )
