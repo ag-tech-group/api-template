@@ -8,7 +8,11 @@ class NoteBase(BaseModel):
     """Base schema with shared note fields."""
 
     title: str = Field(..., min_length=1, max_length=200, examples=["Meeting notes"])
-    body: str | None = Field(None, examples=["Discussed project timeline and milestones."])
+    body: str | None = Field(
+        None,
+        max_length=10_000,
+        examples=["Discussed project timeline and milestones."],
+    )
 
 
 class NoteCreate(NoteBase):
@@ -21,7 +25,7 @@ class NoteUpdate(BaseModel):
     """Schema for updating a note. All fields optional."""
 
     title: str | None = Field(None, min_length=1, max_length=200)
-    body: str | None = None
+    body: str | None = Field(None, max_length=10_000)
 
 
 class NoteRead(NoteBase):
