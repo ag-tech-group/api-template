@@ -81,5 +81,19 @@ async def get_user_manager(
 
 fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
 
-current_active_user = fastapi_users.current_user(active=True)
-current_superuser = fastapi_users.current_user(active=True, superuser=True)
+_fastapi_users_current_active = fastapi_users.current_user(active=True)
+_fastapi_users_current_superuser = fastapi_users.current_user(active=True, superuser=True)
+
+
+async def current_active_user(
+    user: User = Depends(_fastapi_users_current_active),
+) -> User:
+    structlog.contextvars.bind_contextvars(user_id=str(user.id))
+    return user
+
+
+async def current_superuser(
+    user: User = Depends(_fastapi_users_current_superuser),
+) -> User:
+    structlog.contextvars.bind_contextvars(user_id=str(user.id))
+    return user

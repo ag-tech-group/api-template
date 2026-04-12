@@ -48,6 +48,20 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+MAX_REQUEST_BODY_SIZE = 1_048_576  # 1 MB
+
+
+@app.middleware("http")
+async def limit_request_body_size(request: Request, call_next) -> Response:
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_REQUEST_BODY_SIZE:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Request body too large"},
+        )
+    return await call_next(request)
+
+
 # --- Auth routes ---
 # Custom refresh/logout routes (included before FastAPI-Users so /auth/jwt/logout is shadowed)
 app.include_router(auth_refresh_router)
