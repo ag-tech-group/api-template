@@ -12,21 +12,52 @@
 
 FastAPI template with async PostgreSQL, cookie-based JWT authentication, refresh tokens, and security hardening.
 
+## Table of Contents
+
+- [Tech Stack](#tech-stack)
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Running with Docker](#running-with-docker)
+- [API Documentation](#api-documentation)
+  - [Database Viewer](#database-viewer)
+  - [Frontend Integration](#frontend-integration)
+- [API Endpoints](#api-endpoints)
+  - [Auth](#auth)
+  - [Admin](#admin)
+  - [Notes (Example CRUD)](#notes-example-crud)
+- [Authentication](#authentication)
+  - [Role-Based Access Control](#role-based-access-control)
+  - [Security Features](#security-features)
+- [Logging, Telemetry & Feature Flags](#logging-telemetry--feature-flags)
+  - [Structured Logging](#structured-logging)
+  - [OpenTelemetry](#opentelemetry)
+  - [Analytics](#analytics)
+  - [Feature Flags](#feature-flags)
+- [Database Migrations](#database-migrations)
+  - [Workflow](#workflow)
+  - [Common Commands](#common-commands)
+- [Testing](#testing)
+- [Linting & Formatting](#linting--formatting)
+- [Git Setup & Pre-commit Hooks](#git-setup--pre-commit-hooks)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [License](#license)
+
 ## Tech Stack
 
-| Component          | Technology                     |
-| ------------------ | ------------------------------ |
-| Framework          | FastAPI                        |
-| Database           | PostgreSQL (async via asyncpg) |
-| ORM                | SQLAlchemy 2.0                 |
-| Migrations         | Alembic                        |
-| Auth               | FastAPI-Users (cookie JWT)     |
-| Rate Limiting      | slowapi                        |
-| Package Manager    | uv                             |
-| Containerization   | Docker / Docker Compose        |
-| Testing            | Pytest (async)                 |
-| Linting/Formatting | Ruff                           |
-| Git Hooks          | pre-commit                     |
+| Component          | Technology                                                                 |
+| ------------------ | -------------------------------------------------------------------------- |
+| Framework          | [FastAPI](https://fastapi.tiangolo.com/)                                   |
+| Database           | [PostgreSQL](https://www.postgresql.org/) (async via [asyncpg](https://magicstack.github.io/asyncpg/)) |
+| ORM                | [SQLAlchemy 2.0](https://www.sqlalchemy.org/)                              |
+| Migrations         | [Alembic](https://alembic.sqlalchemy.org/)                                 |
+| Auth               | [FastAPI-Users](https://fastapi-users.github.io/fastapi-users/) (cookie JWT) |
+| Rate Limiting      | [slowapi](https://slowapi.readthedocs.io/)                                 |
+| Package Manager    | [uv](https://docs.astral.sh/uv/)                                           |
+| Containerization   | [Docker](https://www.docker.com/) / [Docker Compose](https://docs.docker.com/compose/) |
+| Testing            | [Pytest](https://docs.pytest.org/) (async via [pytest-asyncio](https://pytest-asyncio.readthedocs.io/)) |
+| Linting/Formatting | [Ruff](https://docs.astral.sh/ruff/)                                       |
+| Git Hooks          | [pre-commit](https://pre-commit.com/)                                      |
 
 ## Requirements
 
@@ -328,19 +359,21 @@ api-template/
 
 ## Environment Variables
 
-| Variable       | Description                                     | Default                                                              |
-| -------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string                    | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
-| `SECRET_KEY`   | JWT signing key (min 32 chars in production)    | `change-me-in-production`                                            |
-| `ENVIRONMENT`  | `development` or `production`                   | `development`                                                        |
-| `CORS_ORIGINS` | Comma-separated allowed origins (production)    | (empty — dev uses localhost:5100-5199)                               |
-| `FRONTEND_URL` | Frontend URL for redirects                      | `http://localhost:5173`                                              |
-| `COOKIE_DOMAIN`| Cookie domain (leave empty for localhost)       | (empty)                                                              |
-| `LOG_LEVEL`    | Logging level                                   | `INFO`                                                               |
-| `OTEL_ENABLED` | Enable OpenTelemetry tracing                    | `false`                                                              |
-| `OTEL_SERVICE_NAME` | Service name for traces                    | `api-template`                                                       |
-| `OTEL_EXPORTER_ENDPOINT` | OTLP gRPC collector endpoint          | `http://localhost:4317`                                              |
-| `FEATURE_*`    | Feature flags (e.g. `FEATURE_NEW_DASHBOARD=true`) | (none)                                                             |
+"Required" means the value **must be set when `ENVIRONMENT=production`** — production config validation rejects the defaults for these. Local development runs out of the box with no env vars set.
+
+| Variable                 | Required     | Description                                       | Default                                                              |
+| ------------------------ | ------------ | ------------------------------------------------- | -------------------------------------------------------------------- |
+| `ENVIRONMENT`            | Optional     | `development` or `production`                     | `development`                                                        |
+| `DATABASE_URL`           | Required     | PostgreSQL connection string                      | `postgresql+asyncpg://postgres:postgres@localhost:5432/api_template` |
+| `SECRET_KEY`             | Required     | JWT signing key (min 32 chars in production)      | `change-me-in-production`                                            |
+| `CORS_ORIGINS`           | Required     | Comma-separated allowed origins                   | (empty — dev uses localhost:5100-5199)                               |
+| `FRONTEND_URL`           | Optional     | Frontend URL for redirects                        | `http://localhost:5173`                                              |
+| `COOKIE_DOMAIN`          | Optional     | Cookie domain (leave empty for localhost)         | (empty)                                                              |
+| `LOG_LEVEL`              | Optional     | Logging level                                     | `INFO`                                                               |
+| `OTEL_ENABLED`           | Optional     | Enable OpenTelemetry tracing                      | `false`                                                              |
+| `OTEL_SERVICE_NAME`      | Optional     | Service name for traces                           | `api-template`                                                       |
+| `OTEL_EXPORTER_ENDPOINT` | Optional     | OTLP gRPC collector endpoint                      | `http://localhost:4317`                                              |
+| `FEATURE_*`              | Optional     | Feature flags (e.g. `FEATURE_NEW_DASHBOARD=true`) | (none)                                                               |
 
 ## License
 
