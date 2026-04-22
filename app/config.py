@@ -28,6 +28,10 @@ class Settings(BaseSettings):
 
     # Cookie auth
     cookie_domain: str | None = None
+    # Prefix applied to every auth cookie (e.g. "app" → "app_access", "app_refresh").
+    # Must be overridden in production to avoid collisions with other services on the
+    # same domain — see validate_production_settings below.
+    cookie_prefix: str = "app"
 
     # Logging
     log_level: str = "INFO"
@@ -61,6 +65,16 @@ class Settings(BaseSettings):
                 )
             if "postgres:postgres@" in self.database_url:
                 raise ValueError("Default database credentials must not be used in production")
+            weak_cookie_prefixes = {"", "app", "api-template"}
+            if self.cookie_prefix in weak_cookie_prefixes:
+                raise ValueError(
+                    "COOKIE_PREFIX must be set to a service-scoped value in production "
+                    "(e.g. your service name) to avoid cookie collisions across services "
+                    "on the same domain"
+                )
+            weak_otel_names = {"", "api-template"}
+            if self.otel_service_name in weak_otel_names:
+                raise ValueError("OTEL_SERVICE_NAME must be set to your service name in production")
         return self
 
 
