@@ -5,7 +5,7 @@ from app.config import settings
 ACCESS_TOKEN_LIFETIME = 900  # 15 minutes
 
 cookie_transport = CookieTransport(
-    cookie_name="app_access",
+    cookie_name=f"{settings.cookie_prefix}_access",
     cookie_max_age=ACCESS_TOKEN_LIFETIME,
     cookie_path="/",
     cookie_domain=settings.cookie_domain,

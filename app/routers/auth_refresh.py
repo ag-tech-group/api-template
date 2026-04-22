@@ -2,20 +2,19 @@ from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, Response
 from fastapi.responses import JSONResponse
-from fastapi_users.jwt import decode_jwt
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.backend import cookie_transport, get_jwt_strategy
 from app.auth.refresh import (
-    REFRESH_AUDIENCE,
+    REFRESH_COOKIE_NAME,
     clear_refresh_cookie,
+    decode_refresh_token,
     set_refresh_cookie,
     validate_and_rotate_refresh_token,
 )
 from app.auth.security_logging import SecurityEvent, log_security_event
 from app.auth.users import get_user_db
-from app.config import settings
 from app.database import get_async_session
 from app.models.refresh_token import RefreshToken
 
@@ -24,13 +23,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/refresh", status_code=204)
 async def refresh_access_token(
-    app_refresh: str | None = Cookie(None),
+    refresh_token: str | None = Cookie(None, alias=REFRESH_COOKIE_NAME),
     session: AsyncSession = Depends(get_async_session),
 ):
-    if not app_refresh:
+    if not refresh_token:
         return JSONResponse(status_code=401, content={"detail": "Missing refresh token"})
 
-    result = await validate_and_rotate_refresh_token(app_refresh, session)
+    result = await validate_and_rotate_refresh_token(refresh_token, session)
 
     if result is None:
         log_security_event(
@@ -58,7 +57,7 @@ async def refresh_access_token(
     response = Response(status_code=204)
     # Set access cookie
     response.set_cookie(
-        key="app_access",
+        key=cookie_transport.cookie_name,
         value=access_token,
         max_age=cookie_transport.cookie_max_age,
         path=cookie_transport.cookie_path,
@@ -81,17 +80,17 @@ async def refresh_access_token(
 
 @router.post("/jwt/logout", status_code=204)
 async def logout(
-    app_refresh: str | None = Cookie(None),
+    refresh_token: str | None = Cookie(None, alias=REFRESH_COOKIE_NAME),
     session: AsyncSession = Depends(get_async_session),
 ):
-    # Revoke the refresh token family if a refresh cookie is present
-    if app_refresh:
-        try:
-            payload = decode_jwt(
-                app_refresh,
-                secret=settings.secret_key,
-                audience=REFRESH_AUDIENCE,
-            )
+    # Revoke the refresh-token family if a valid refresh cookie is present.
+    # Decode failures → log and proceed (user-facing logout still succeeds).
+    # DB errors → propagate as 500, not silently swallowed as "decode failed".
+    if refresh_token:
+        payload = decode_refresh_token(refresh_token)
+        if payload is None:
+            log_security_event(SecurityEvent.LOGOUT, detail="refresh token decode failed")
+        else:
             family = payload.get("family")
             user_id = payload.get("sub")
             if family:
@@ -106,8 +105,6 @@ async def logout(
                     user_id=user_id,
                     detail=f"revoked token family={family}",
                 )
-        except Exception:
-            log_security_event(SecurityEvent.LOGOUT, detail="refresh token decode failed")
     else:
         log_security_event(SecurityEvent.LOGOUT, detail="no refresh token cookie")
 

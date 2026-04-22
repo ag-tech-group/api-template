@@ -162,10 +162,12 @@ All note endpoints require authentication. Users can only access their own notes
 
 Authentication uses httpOnly cookies with short-lived access tokens and rotating refresh tokens.
 
-- **Access token**: 15-minute JWT stored in an `app_access` httpOnly cookie
-- **Refresh token**: 7-day JWT stored in an `app_refresh` httpOnly cookie (scoped to `/auth/refresh`)
+- **Access token**: 15-minute JWT stored in a `{COOKIE_PREFIX}_access` httpOnly cookie
+- **Refresh token**: 7-day JWT stored in a `{COOKIE_PREFIX}_refresh` httpOnly cookie (scoped to `/auth/refresh`)
 - **Token rotation**: Each refresh issues a new token in the same family; reuse of an old token revokes the entire family (theft detection)
 - **Rate limiting**: Login (5/min), registration (3/min), refresh (30/min)
+
+> **Before first deploy**: set `COOKIE_PREFIX` to a service-scoped value (typically your service name, e.g. `myservice`). Browser cookies on the same domain are identified by name, so two services sharing a `.example.com` with the default prefix will overwrite each other's auth cookies. Production startup will refuse to boot with the template defaults `""`, `"app"`, or `"api-template"`.
 
 ### Role-Based Access Control
 
@@ -190,7 +192,7 @@ async def admin_only(user: User = Depends(require_role("admin"))):
 - **CORS lockdown**: Explicit origins, methods, and headers (no wildcards in production)
 - **Security headers**: HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy
 - **Rate limiting**: Per-endpoint limits on auth routes with security event logging
-- **Production config validation**: Rejects weak secrets and default database credentials at startup
+- **Production config validation**: Rejects weak secrets, default database credentials, unset cookie prefix, and default OTel service name at startup
 - **Security event logging**: Structured logs for login, logout, registration, token refresh, and rate limit events
 
 ## Logging, Telemetry & Feature Flags
@@ -369,9 +371,10 @@ api-template/
 | `CORS_ORIGINS`           | Required     | Comma-separated allowed origins                   | (empty — dev uses localhost:5100-5199)                               |
 | `FRONTEND_URL`           | Optional     | Frontend URL for redirects                        | `http://localhost:5173`                                              |
 | `COOKIE_DOMAIN`          | Optional     | Cookie domain (leave empty for localhost)         | (empty)                                                              |
+| `COOKIE_PREFIX`          | Required     | Prefix for auth cookie names (service-scoped)     | `app`                                                                |
 | `LOG_LEVEL`              | Optional     | Logging level                                     | `INFO`                                                               |
 | `OTEL_ENABLED`           | Optional     | Enable OpenTelemetry tracing                      | `false`                                                              |
-| `OTEL_SERVICE_NAME`      | Optional     | Service name for traces                           | `api-template`                                                       |
+| `OTEL_SERVICE_NAME`      | Required     | Service name for traces                           | `api-template`                                                       |
 | `OTEL_EXPORTER_ENDPOINT` | Optional     | OTLP gRPC collector endpoint                      | `http://localhost:4317`                                              |
 | `FEATURE_*`              | Optional     | Feature flags (e.g. `FEATURE_NEW_DASHBOARD=true`) | (none)                                                               |
 

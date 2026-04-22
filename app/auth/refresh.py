@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import Response
 from fastapi_users.jwt import decode_jwt, generate_jwt
 from sqlalchemy import select, update
@@ -10,8 +11,25 @@ from app.config import settings
 from app.models.refresh_token import RefreshToken
 
 REFRESH_TOKEN_LIFETIME = timedelta(days=7)
-REFRESH_COOKIE_NAME = "app_refresh"
+REFRESH_COOKIE_NAME = f"{settings.cookie_prefix}_refresh"
 REFRESH_AUDIENCE = ["app:refresh"]
+
+
+def decode_refresh_token(token: str) -> dict | None:
+    """Decode a refresh-token JWT, returning None on any decode failure.
+
+    Separates decode errors (invalid/expired/malformed → None) from downstream
+    DB errors (which should propagate as 500s, not be swallowed alongside decode
+    failures by a caller's broad except).
+    """
+    try:
+        return decode_jwt(
+            token,
+            secret=settings.secret_key,
+            audience=REFRESH_AUDIENCE,
+        )
+    except jwt.PyJWTError:
+        return None
 
 
 async def create_refresh_token(
@@ -50,13 +68,8 @@ async def validate_and_rotate_refresh_token(
     token_jwt: str,
     session: AsyncSession,
 ) -> tuple[str, str] | None:
-    try:
-        payload = decode_jwt(
-            token_jwt,
-            secret=settings.secret_key,
-            audience=REFRESH_AUDIENCE,
-        )
-    except Exception:
+    payload = decode_refresh_token(token_jwt)
+    if payload is None:
         return None
 
     jti = payload.get("jti")
