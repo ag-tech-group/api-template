@@ -4,11 +4,12 @@ import uuid
 import structlog
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from limits import RateLimitItem, parse
 from scalar_fastapi import get_scalar_api_reference
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.auth import auth_backend, current_active_user, fastapi_users
@@ -43,10 +44,18 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Rate limiting
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiting. `default_limits` applies to every route that isn't decorated
+# with its own `@limiter.limit(...)` or marked `@limiter.exempt`; SlowAPIMiddleware
+# is what actually enforces it (without the middleware, only explicitly-decorated
+# routes are limited). The stricter per-path auth limits in `rate_limit_auth`
+# below stack on top of this default — an auth route is subject to both.
+# `get_remote_address` reads `request.client.host`, which is the real client IP
+# only if uvicorn runs with `--proxy-headers` behind a trusted proxy (see start.sh);
+# without that, every request collapses into one bucket and the limit is useless.
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 MAX_REQUEST_BODY_SIZE = 1_048_576  # 1 MB
 
@@ -177,7 +186,11 @@ for router in ROUTERS:
     app.include_router(router, prefix=API_V1_PREFIX)
 
 
+# Infrastructure routes — not part of the versioned API, and exempt from the
+# global rate limit so health-check probes, doc/spec fetches, and automated
+# scanners can't burn through the quota.
 @app.get("/docs", include_in_schema=False)
+@limiter.exempt
 async def scalar_docs():
     """Scalar API documentation."""
     return get_scalar_api_reference(
@@ -187,12 +200,31 @@ async def scalar_docs():
 
 
 @app.get("/")
+@limiter.exempt
 async def root():
     """Health check endpoint."""
     return {"status": "ok", "message": "API Template"}
 
 
 @app.get("/health")
+@limiter.exempt
 async def health_check():
     """Detailed health check."""
     return {"status": "healthy"}
+
+
+# Per https://securitytxt.org/ — security researchers and automated scanners look
+# for this file to find a disclosure contact. Replace the contact before deploying
+# (see the "before first deploy" note in the README) and bump Expires before the
+# date below.
+SECURITY_TXT = """\
+Contact: mailto:security@example.com
+Expires: 2027-05-12T00:00:00.000Z
+Preferred-Languages: en
+"""
+
+
+@app.get("/.well-known/security.txt", include_in_schema=False)
+@limiter.exempt
+async def security_txt() -> PlainTextResponse:
+    return PlainTextResponse(SECURITY_TXT)

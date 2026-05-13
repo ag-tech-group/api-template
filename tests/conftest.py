@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.auth import current_active_user
 from app.database import Base, get_async_session
-from app.main import app
+from app.main import app, limiter
 from app.models.user import User
 
 # Use SQLite for tests (faster, no external dependencies)
@@ -25,6 +25,14 @@ async def setup_database():
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Clear rate-limit buckets between tests so request counts don't leak across tests."""
+    limiter._storage.reset()
+    yield
+    limiter._storage.reset()
 
 
 async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
