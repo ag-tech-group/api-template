@@ -1,6 +1,12 @@
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Prefix under which every application route (auth + business resources) is
+# mounted, so the whole API surface is versioned together. Infrastructure routes
+# (/, /health, /docs, /openapi.json) stay unversioned. Not env-overridable on
+# purpose — the path version is part of the code contract, not deployment config.
+API_V1_PREFIX = "/v1"
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""

@@ -11,7 +11,7 @@ from app.models.user import User
 class TestListNotes:
     async def test_list_empty(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.get("/notes")
+        response = await client.get("/v1/notes")
         assert response.status_code == 200
         assert response.json() == []
 
@@ -21,7 +21,7 @@ class TestListNotes:
         session.add(note)
         await session.commit()
 
-        response = await client.get("/notes")
+        response = await client.get("/v1/notes")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
@@ -36,7 +36,7 @@ class TestListNotes:
         session.add(note)
         await session.commit()
 
-        response = await client.get("/notes")
+        response = await client.get("/v1/notes")
         assert response.status_code == 200
         assert response.json() == []
 
@@ -45,7 +45,7 @@ class TestCreateNote:
     async def test_create_success(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
         response = await client.post(
-            "/notes",
+            "/v1/notes",
             json={"title": "My note", "body": "Hello world"},
         )
         assert response.status_code == 201
@@ -57,13 +57,13 @@ class TestCreateNote:
 
     async def test_create_without_body(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.post("/notes", json={"title": "Title only"})
+        response = await client.post("/v1/notes", json={"title": "Title only"})
         assert response.status_code == 201
         assert response.json()["body"] is None
 
     async def test_create_invalid_title(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.post("/notes", json={"title": ""})
+        response = await client.post("/v1/notes", json={"title": ""})
         assert response.status_code == 422
 
 
@@ -75,13 +75,13 @@ class TestGetNote:
         await session.commit()
         await session.refresh(note)
 
-        response = await client.get(f"/notes/{note.id}")
+        response = await client.get(f"/v1/notes/{note.id}")
         assert response.status_code == 200
         assert response.json()["title"] == "Get me"
 
     async def test_get_not_found(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.get(f"/notes/{uuid4()}")
+        response = await client.get(f"/v1/notes/{uuid4()}")
         assert response.status_code == 404
 
     async def test_get_other_users_note(
@@ -94,7 +94,7 @@ class TestGetNote:
         await session.commit()
         await session.refresh(note)
 
-        response = await client.get(f"/notes/{note.id}")
+        response = await client.get(f"/v1/notes/{note.id}")
         assert response.status_code == 404
 
 
@@ -106,7 +106,7 @@ class TestUpdateNote:
         await session.commit()
         await session.refresh(note)
 
-        response = await client.patch(f"/notes/{note.id}", json={"title": "Updated"})
+        response = await client.patch(f"/v1/notes/{note.id}", json={"title": "Updated"})
         assert response.status_code == 200
         data = response.json()
         assert data["title"] == "Updated"
@@ -114,7 +114,7 @@ class TestUpdateNote:
 
     async def test_update_not_found(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.patch(f"/notes/{uuid4()}", json={"title": "Nope"})
+        response = await client.patch(f"/v1/notes/{uuid4()}", json={"title": "Nope"})
         assert response.status_code == 404
 
 
@@ -126,14 +126,33 @@ class TestDeleteNote:
         await session.commit()
         await session.refresh(note)
 
-        response = await client.delete(f"/notes/{note.id}")
+        response = await client.delete(f"/v1/notes/{note.id}")
         assert response.status_code == 204
 
         # Verify deleted
-        response = await client.get(f"/notes/{note.id}")
+        response = await client.get(f"/v1/notes/{note.id}")
         assert response.status_code == 404
 
     async def test_delete_not_found(self, client: AsyncClient, test_user: User):
         app.dependency_overrides[current_active_user] = lambda: test_user
-        response = await client.delete(f"/notes/{uuid4()}")
+        response = await client.delete(f"/v1/notes/{uuid4()}")
         assert response.status_code == 404
+
+
+class TestRoutesAreVersioned:
+    """Guard: application routes live under /v1 only — the unversioned path 404s.
+
+    Catches a router accidentally mounted at the root (e.g. a bare
+    `app.include_router(notes_router)` instead of appending to the ROUTERS tuple).
+    """
+
+    async def test_unversioned_route_not_served(self, client: AsyncClient, test_user: User):
+        app.dependency_overrides[current_active_user] = lambda: test_user
+        assert (await client.get("/notes")).status_code == 404
+        # ...but the versioned path works.
+        assert (await client.get("/v1/notes")).status_code == 200
+
+    async def test_health_routes_stay_unversioned(self, client: AsyncClient):
+        # Infrastructure routes are deliberately not under /v1.
+        assert (await client.get("/health")).status_code == 200
+        assert (await client.get("/v1/health")).status_code == 404

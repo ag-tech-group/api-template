@@ -20,7 +20,7 @@ class TestRoleAccess:
         await session.commit()
 
         response = await admin_client.patch(
-            f"/admin/users/{target.id}/role",
+            f"/v1/admin/users/{target.id}/role",
             json={"role": "admin"},
         )
         assert response.status_code == 200
@@ -28,7 +28,7 @@ class TestRoleAccess:
     async def test_regular_user_gets_403(self, auth_client: AsyncClient, test_user: User):
         """Regular users are forbidden from admin endpoints."""
         response = await auth_client.patch(
-            f"/admin/users/{uuid4()}/role",
+            f"/v1/admin/users/{uuid4()}/role",
             json={"role": "admin"},
         )
         assert response.status_code == 403
@@ -45,7 +45,7 @@ class TestRoleAccess:
             await session.commit()
 
             response = await client.patch(
-                f"/admin/users/{target.id}/role",
+                f"/v1/admin/users/{target.id}/role",
                 json={"role": "admin"},
             )
             assert response.status_code == 200
@@ -54,7 +54,7 @@ class TestRoleAccess:
 
 
 class TestRoleUpdate:
-    """Test the PATCH /admin/users/{user_id}/role endpoint."""
+    """Test the PATCH /v1/admin/users/{user_id}/role endpoint."""
 
     async def test_update_role_success(self, admin_client: AsyncClient, admin_user: User, session):
         """Successfully update a user's role."""
@@ -63,7 +63,7 @@ class TestRoleUpdate:
         await session.commit()
 
         response = await admin_client.patch(
-            f"/admin/users/{target.id}/role",
+            f"/v1/admin/users/{target.id}/role",
             json={"role": "admin"},
         )
         assert response.status_code == 200
@@ -80,7 +80,7 @@ class TestRoleUpdate:
         await session.commit()
 
         response = await admin_client.patch(
-            f"/admin/users/{target.id}/role",
+            f"/v1/admin/users/{target.id}/role",
             json={"role": "supervillain"},
         )
         assert response.status_code == 422
@@ -88,7 +88,7 @@ class TestRoleUpdate:
     async def test_user_not_found_returns_404(self, admin_client: AsyncClient, admin_user: User):
         """Updating a non-existent user returns 404."""
         response = await admin_client.patch(
-            f"/admin/users/{uuid4()}/role",
+            f"/v1/admin/users/{uuid4()}/role",
             json={"role": "admin"},
         )
         assert response.status_code == 404
@@ -96,7 +96,7 @@ class TestRoleUpdate:
 
 
 class TestAuthMeIncludesRole:
-    """Test that /auth/me returns the role field."""
+    """Test that /v1/auth/me returns the role field."""
 
     async def test_me_returns_role_for_regular_user(self, client: AsyncClient):
         user = User(
@@ -110,7 +110,7 @@ class TestAuthMeIncludesRole:
         )
         app.dependency_overrides[current_active_user] = lambda: user
         try:
-            response = await client.get("/auth/me")
+            response = await client.get("/v1/auth/me")
             assert response.status_code == 200
             data = response.json()
             assert data["role"] == "user"
@@ -129,7 +129,7 @@ class TestAuthMeIncludesRole:
         )
         app.dependency_overrides[current_active_user] = lambda: user
         try:
-            response = await client.get("/auth/me")
+            response = await client.get("/v1/auth/me")
             assert response.status_code == 200
             data = response.json()
             assert data["role"] == "admin"
