@@ -13,7 +13,7 @@ from slowapi.util import get_remote_address
 
 from app.auth import auth_backend, current_active_user, fastapi_users
 from app.auth.security_logging import SecurityEvent, log_security_event
-from app.config import settings
+from app.config import API_V1_PREFIX, settings
 from app.features import router as features_router
 from app.logging import setup_logging
 from app.models.user import User
@@ -62,32 +62,32 @@ async def limit_request_body_size(request: Request, call_next) -> Response:
     return await call_next(request)
 
 
-# --- Auth routes ---
-# Custom refresh/logout routes (included before FastAPI-Users so /auth/jwt/logout is shadowed)
-app.include_router(auth_refresh_router)
+# --- Auth routes (mounted under /v1) ---
+# Custom refresh/logout routes (included before FastAPI-Users so /v1/auth/jwt/logout is shadowed)
+app.include_router(auth_refresh_router, prefix=API_V1_PREFIX)
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
-    prefix="/auth/jwt",
+    prefix=f"{API_V1_PREFIX}/auth/jwt",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/auth",
+    prefix=f"{API_V1_PREFIX}/auth",
     tags=["auth"],
 )
 # --- End auth routes ---
 
 
-@app.get("/auth/me", response_model=UserRead, tags=["auth"])
+@app.get(f"{API_V1_PREFIX}/auth/me", response_model=UserRead, tags=["auth"])
 async def get_current_user(user: User = Depends(current_active_user)):
     return user
 
 
 # Path-specific rate limits for auth endpoints
 _AUTH_RATE_LIMITS: dict[str, RateLimitItem] = {
-    "/auth/jwt/login": parse("5/minute"),
-    "/auth/register": parse("3/minute"),
-    "/auth/refresh": parse("30/minute"),
+    f"{API_V1_PREFIX}/auth/jwt/login": parse("5/minute"),
+    f"{API_V1_PREFIX}/auth/register": parse("3/minute"),
+    f"{API_V1_PREFIX}/auth/refresh": parse("30/minute"),
 }
 
 
@@ -138,7 +138,7 @@ async def request_id_middleware(request: Request, call_next) -> Response:
 async def cache_control_middleware(request: Request, call_next) -> Response:
     """Set Cache-Control headers: no-store for auth paths, public caching for GETs."""
     response = await call_next(request)
-    if request.url.path.startswith("/auth/"):
+    if request.url.path.startswith(f"{API_V1_PREFIX}/auth/"):
         response.headers["Cache-Control"] = "no-store"
     elif request.method == "GET" and response.status_code == 200:
         response.headers["Cache-Control"] = "public, max-age=3600"
@@ -165,10 +165,16 @@ async def request_logging_middleware(request: Request, call_next) -> Response:
     return response
 
 
-# API routes
-app.include_router(admin_router)
-app.include_router(notes_router)
-app.include_router(features_router)
+# Application routers, all mounted under /v1. Add new resource routers to this
+# tuple — they're loop-mounted with the /v1 prefix automatically. (The auth
+# routers above are mounted separately because their ordering matters.)
+ROUTERS = (
+    admin_router,
+    notes_router,
+    features_router,
+)
+for router in ROUTERS:
+    app.include_router(router, prefix=API_V1_PREFIX)
 
 
 @app.get("/docs", include_in_schema=False)

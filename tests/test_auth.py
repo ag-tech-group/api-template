@@ -46,7 +46,7 @@ class TestLogoutRevocation:
         await session.commit()
 
         response = await client.post(
-            "/auth/jwt/logout",
+            "/v1/auth/jwt/logout",
             cookies={REFRESH_COOKIE_NAME: _make_refresh_jwt(test_user.id, jti, family)},
         )
         assert response.status_code == 204
@@ -77,7 +77,7 @@ class TestLogoutRevocation:
         await session.commit()
 
         response = await client.post(
-            "/auth/jwt/logout",
+            "/v1/auth/jwt/logout",
             cookies={REFRESH_COOKIE_NAME: _make_refresh_jwt(test_user.id, tokens[-1].id, family)},
         )
         assert response.status_code == 204
@@ -95,13 +95,13 @@ class TestLogoutRevocation:
     async def test_logout_with_invalid_token_returns_204(self, client: AsyncClient):
         """Malformed cookie: logout still succeeds (user-facing) and does not crash."""
         response = await client.post(
-            "/auth/jwt/logout",
+            "/v1/auth/jwt/logout",
             cookies={REFRESH_COOKIE_NAME: "not-a-real-jwt"},
         )
         assert response.status_code == 204
 
     async def test_logout_without_cookie_returns_204(self, client: AsyncClient):
-        response = await client.post("/auth/jwt/logout")
+        response = await client.post("/v1/auth/jwt/logout")
         assert response.status_code == 204
 
 

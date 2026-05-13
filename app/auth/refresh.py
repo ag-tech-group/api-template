@@ -7,11 +7,15 @@ from fastapi_users.jwt import decode_jwt, generate_jwt
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import API_V1_PREFIX, settings
 from app.models.refresh_token import RefreshToken
 
 REFRESH_TOKEN_LIFETIME = timedelta(days=7)
 REFRESH_COOKIE_NAME = f"{settings.cookie_prefix}_refresh"
+# Scoped to the refresh endpoint's URL so the browser only sends the refresh
+# token there. Must track where auth_refresh_router is mounted in app/main.py
+# (API_V1_PREFIX + "/auth/refresh") — a mismatch silently breaks token refresh.
+REFRESH_COOKIE_PATH = f"{API_V1_PREFIX}/auth/refresh"
 REFRESH_AUDIENCE = ["app:refresh"]
 
 
@@ -113,7 +117,7 @@ def set_refresh_cookie(response: Response, jwt: str) -> None:
         key=REFRESH_COOKIE_NAME,
         value=jwt,
         max_age=int(REFRESH_TOKEN_LIFETIME.total_seconds()),
-        path="/auth/refresh",
+        path=REFRESH_COOKIE_PATH,
         domain=settings.cookie_domain,
         secure=not settings.is_development,
         httponly=True,
@@ -124,7 +128,7 @@ def set_refresh_cookie(response: Response, jwt: str) -> None:
 def clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
-        path="/auth/refresh",
+        path=REFRESH_COOKIE_PATH,
         domain=settings.cookie_domain,
         secure=not settings.is_development,
         httponly=True,

@@ -128,42 +128,44 @@ This requires the API to be running locally (or set `OPENAPI_URL` to point to a 
 
 ## API Endpoints
 
+All application routes are served under the `/v1` prefix so the API surface can be versioned as a whole — when a breaking change is needed, mount the new routers under `/v2` alongside `/v1`. Infrastructure routes (`/`, `/health`, `/docs`, `/openapi.json`) stay unversioned. Routers are registered in the `ROUTERS` tuple in `app/main.py`, which loop-mounts each one with the `/v1` prefix.
+
 ### Auth
 
-| Method | Endpoint            | Description                         |
-| ------ | ------------------- | ----------------------------------- |
-| POST   | `/auth/register`    | Create a new account                |
-| POST   | `/auth/jwt/login`   | Log in (sets access + refresh cookies) |
-| POST   | `/auth/jwt/logout`  | Log out (revokes tokens, clears cookies) |
-| POST   | `/auth/refresh`     | Rotate refresh token, reissue access token |
-| GET    | `/auth/me`          | Get current authenticated user      |
+| Method | Endpoint               | Description                                |
+| ------ | ---------------------- | ------------------------------------------ |
+| POST   | `/v1/auth/register`    | Create a new account                       |
+| POST   | `/v1/auth/jwt/login`   | Log in (sets access + refresh cookies)     |
+| POST   | `/v1/auth/jwt/logout`  | Log out (revokes tokens, clears cookies)   |
+| POST   | `/v1/auth/refresh`     | Rotate refresh token, reissue access token |
+| GET    | `/v1/auth/me`          | Get current authenticated user             |
 
 ### Admin
 
 Admin endpoints require the `admin` role (superusers also have access).
 
-| Method | Endpoint                       | Description              |
-| ------ | ------------------------------ | ------------------------ |
-| PATCH  | `/admin/users/{id}/role`       | Update a user's role     |
+| Method | Endpoint                       | Description          |
+| ------ | ------------------------------ | -------------------- |
+| PATCH  | `/v1/admin/users/{id}/role`    | Update a user's role |
 
 ### Notes (Example CRUD)
 
 All note endpoints require authentication. Users can only access their own notes.
 
-| Method | Endpoint      | Description              |
-| ------ | ------------- | ------------------------ |
-| GET    | `/notes`      | List current user's notes |
-| GET    | `/notes/{id}` | Get a note by ID         |
-| POST   | `/notes`      | Create a note            |
-| PATCH  | `/notes/{id}` | Update a note            |
-| DELETE | `/notes/{id}` | Delete a note            |
+| Method | Endpoint         | Description               |
+| ------ | ---------------- | ------------------------- |
+| GET    | `/v1/notes`      | List current user's notes |
+| GET    | `/v1/notes/{id}` | Get a note by ID          |
+| POST   | `/v1/notes`      | Create a note             |
+| PATCH  | `/v1/notes/{id}` | Update a note             |
+| DELETE | `/v1/notes/{id}` | Delete a note             |
 
 ## Authentication
 
 Authentication uses httpOnly cookies with short-lived access tokens and rotating refresh tokens.
 
 - **Access token**: 15-minute JWT stored in a `{COOKIE_PREFIX}_access` httpOnly cookie
-- **Refresh token**: 7-day JWT stored in a `{COOKIE_PREFIX}_refresh` httpOnly cookie (scoped to `/auth/refresh`)
+- **Refresh token**: 7-day JWT stored in a `{COOKIE_PREFIX}_refresh` httpOnly cookie (scoped to `/v1/auth/refresh` — the cookie's `path` tracks `API_V1_PREFIX` in `app/config.py`)
 - **Token rotation**: Each refresh issues a new token in the same family; reuse of an old token revokes the entire family (theft detection)
 - **Rate limiting**: Login (5/min), registration (3/min), refresh (30/min)
 
@@ -176,7 +178,7 @@ Users have a `role` field (default: `user`). Roles are defined as a `StrEnum` in
 - **user** — default role for all registered users
 - **admin** — can access admin endpoints (e.g. updating user roles)
 
-Superusers (`is_superuser=True`) bypass all role checks. Roles are read-only via `GET /auth/me` and can only be changed by admins via `PATCH /admin/users/{id}/role`. The `require_role()` dependency factory can be used to gate any route:
+Superusers (`is_superuser=True`) bypass all role checks. Roles are read-only via `GET /v1/auth/me` and can only be changed by admins via `PATCH /v1/admin/users/{id}/role`. The `require_role()` dependency factory can be used to gate any route:
 
 ```python
 from app.auth import require_role
@@ -219,7 +221,7 @@ Use the `get_analytics()` FastAPI dependency to access it in route handlers.
 
 Feature flags are read from `FEATURE_*` environment variables at startup (no database required). Set `FEATURE_<NAME>=true` or `false` in your `.env`.
 
-The `GET /flags` endpoint (requires authentication) returns all flags as a JSON object, consumed by the web-template's `FeatureFlagProvider`.
+The `GET /v1/flags` endpoint (requires authentication) returns all flags as a JSON object, consumed by the web-template's `FeatureFlagProvider`.
 
 Use the `get_feature_flags()` dependency in route handlers to check flags server-side via `flags.is_enabled("flag_name")`.
 
@@ -332,7 +334,7 @@ api-template/
 │   │   └── user.py             # User model (FastAPI-Users)
 │   ├── routers/
 │   │   ├── admin.py            # Admin endpoints (role management)
-│   │   ├── auth_refresh.py     # /auth/refresh and /auth/jwt/logout
+│   │   ├── auth_refresh.py     # /v1/auth/refresh and /v1/auth/jwt/logout
 │   │   └── notes.py            # Notes CRUD (user-scoped)
 │   ├── schemas/
 │   │   ├── note.py             # Note request/response schemas
