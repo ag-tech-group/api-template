@@ -1,6 +1,6 @@
 [project]
 name = "api-template"
-version = "0.1.0"
+version = "1.0.0"
 description = "FastAPI template with async PostgreSQL and JWT auth"
 readme = "README.md"
 requires-python = ">=3.12"
