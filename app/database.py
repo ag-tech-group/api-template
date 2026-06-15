@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

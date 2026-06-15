@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """add user role column
 
 Revision ID: b3c7a1d9e2f4

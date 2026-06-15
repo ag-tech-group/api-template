@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 from uuid import uuid4
 
 from httpx import AsyncClient

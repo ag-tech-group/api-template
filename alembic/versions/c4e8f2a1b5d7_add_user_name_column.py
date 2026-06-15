@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """add user name column
 
 Revision ID: c4e8f2a1b5d7

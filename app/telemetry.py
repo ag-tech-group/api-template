@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """OpenTelemetry auto-instrumentation for FastAPI."""
 
 from __future__ import annotations
