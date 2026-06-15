@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """Analytics event abstraction with a pluggable backend."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

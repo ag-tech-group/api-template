@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 AG Technology Group LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """App-level / infrastructure route behaviour: security.txt and global rate limiting."""
 
 from httpx import AsyncClient
