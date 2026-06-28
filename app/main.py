@@ -148,12 +148,24 @@ async def request_id_middleware(request: Request, call_next) -> Response:
 
 @app.middleware("http")
 async def cache_control_middleware(request: Request, call_next) -> Response:
-    """Set Cache-Control headers: no-store for auth paths, public caching for GETs."""
+    """Default every response to ``no-store``; caching is strictly opt-in.
+
+    A blanket ``public, max-age=...`` on all GETs is a foot-gun: it lets shared
+    caches and browsers store authenticated, per-user, or mutable data — a user
+    would not see their own edits until the TTL expired, and a shared/CDN cache
+    could serve one user's response to another. So the safe default is
+    ``no-store``. An endpoint that serves genuinely public, cacheable data opts
+    in by setting its own ``Cache-Control`` in the handler, e.g.
+    ``response.headers["Cache-Control"] = "public, max-age=60"`` — this
+    middleware leaves an already-set header intact.
+
+    CDN note: an edge cache needs its own cache rule to cache JSON at all, and a
+    cacheable response must avoid ``Vary: Cookie`` (it fragments the cache per
+    cookie value and silently defeats CDN coalescing).
+    """
     response = await call_next(request)
-    if request.url.path.startswith(f"{API_V1_PREFIX}/auth/"):
+    if "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
-    elif request.method == "GET" and response.status_code == 200:
-        response.headers["Cache-Control"] = "public, max-age=3600"
     return response
 
 
