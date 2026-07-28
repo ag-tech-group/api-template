@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @model_validator(mode="after")
-    def validate_production_settings(self) -> "Settings":
+    def validate_production_settings(self) -> Settings:
         if not self.is_development:
             weak_secrets = {"change-me-in-production", "dev-secret-key-change-in-production", ""}
             if self.secret_key in weak_secrets or len(self.secret_key) < 32:

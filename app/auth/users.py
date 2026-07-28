@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 
 async def get_user_db(
     session: AsyncSession = Depends(get_async_session),
-) -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
+) -> AsyncGenerator[SQLAlchemyUserDatabase]:
     yield SQLAlchemyUserDatabase(session, User)
 
 
@@ -78,7 +78,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
 
 async def get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
-) -> AsyncGenerator[UserManager, None]:
+) -> AsyncGenerator[UserManager]:
     yield UserManager(user_db)
 
 

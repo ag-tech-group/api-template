@@ -38,7 +38,7 @@ def reset_rate_limiter():
     limiter._storage.reset()
 
 
-async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def override_get_async_session() -> AsyncGenerator[AsyncSession]:
     async with async_session_maker() as session:
         yield session
 
@@ -47,7 +47,7 @@ app.dependency_overrides[get_async_session] = override_get_async_session
 
 
 @pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client() -> AsyncGenerator[AsyncClient]:
     """Async HTTP client for testing."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -57,7 +57,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-async def session() -> AsyncGenerator[AsyncSession, None]:
+async def session() -> AsyncGenerator[AsyncSession]:
     """Direct database session for test setup."""
     async with async_session_maker() as session:
         yield session
@@ -88,7 +88,7 @@ def superuser() -> User:
 
 
 @pytest.fixture
-async def auth_client(client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient, None]:
+async def auth_client(client: AsyncClient, test_user: User) -> AsyncGenerator[AsyncClient]:
     """Client that authenticates as test_user via dependency override."""
     app.dependency_overrides[current_active_user] = lambda: test_user
     try:
@@ -98,7 +98,7 @@ async def auth_client(client: AsyncClient, test_user: User) -> AsyncGenerator[As
 
 
 @pytest.fixture
-async def admin_client(client: AsyncClient, admin_user: User) -> AsyncGenerator[AsyncClient, None]:
+async def admin_client(client: AsyncClient, admin_user: User) -> AsyncGenerator[AsyncClient]:
     """Client that authenticates as admin_user via dependency override."""
     app.dependency_overrides[current_active_user] = lambda: admin_user
     try:
