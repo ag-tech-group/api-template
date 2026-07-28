@@ -3,7 +3,7 @@ name = "api-template"
 version = "0.1.0"
 description = "FastAPI template with async PostgreSQL and JWT auth"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.135.0",
     "uvicorn[standard]>=0.41.0",
@@ -40,7 +40,7 @@ testpaths = ["tests"]
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
@@ -60,3 +60,14 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.uv]
+# FastAPI 0.136+ breaks slowapi's SlowAPIMiddleware enforcement of
+# `default_limits` on undecorated routes (verified empirically: the global
+# rate-limit test fails on 0.140.x and passes on 0.135.x with all other
+# dependencies identical; independent of Starlette, slowapi, and Python
+# versions). slowapi is low-activity upstream, so hold FastAPI until slowapi
+# is fixed or replaced with a middleware built directly on `limits`.
+# Starlette is capped alongside it since slowapi has never been validated
+# against Starlette 1.x.
+constraint-dependencies = ["fastapi<0.136", "starlette<1.0"]
