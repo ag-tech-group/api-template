@@ -100,7 +100,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.0" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", specifier = ">=0.135.0" },
-    { name = "fastapi-users", extras = ["sqlalchemy"], specifier = ">=15.0.0" },
+    { name = "fastapi-users", extras = ["sqlalchemy"], specifier = ">=15.0.5" },
     { name = "limits", specifier = ">=5.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.40.0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.40.0" },
