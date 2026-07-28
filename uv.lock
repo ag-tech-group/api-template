@@ -113,7 +113,7 @@ requires-dist = [
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", specifier = ">=2.0.48" },
     { name = "structlog", specifier = ">=25.0.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.41.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0" },
 ]
 
 [package.metadata.requires-dev]
