@@ -186,9 +186,9 @@ Superusers (`is_superuser=True`) bypass all role checks. Roles are read-only via
 ```python
 from app.auth import require_role
 
+
 @router.get("/admin-only")
-async def admin_only(user: User = Depends(require_role("admin"))):
-    ...
+async def admin_only(user: User = Depends(require_role("admin"))): ...
 ```
 
 ### Security Features
