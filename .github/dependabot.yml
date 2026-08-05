@@ -4,6 +4,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Maintain uv.lock only; leave the `>=` floors in pyproject.toml alone.
+    # Without this, Dependabot defaults to BumpVersions for non-libraries and
+    # ratchets each floor up to whatever just resolved — producing PRs that
+    # change no installed version (the lock is already there) while narrowing
+    # the declared minimum for anyone scaffolding from this template. The lock
+    # is what CI exercises; the floors are a compatibility declaration.
+    versioning-strategy: "lockfile-only"
     groups:
       python-minor-patch:
         update-types:
